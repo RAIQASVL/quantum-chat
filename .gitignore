@@ -23,3 +23,48 @@ go.work.sum
 
 # env file
 .env
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+*.env
+
+# IDE
+.idea/
+.vscode/
+
+# Docker
+.env
+docker-compose.override.yml
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+System Volume Information/
+
+# macOS
+.DS_Store
+.AppleDouble
+.Locks
+.Spotlight-V100
+.Trashes
+.VolumeIcon.icns
+.DocumentRevisions-V100/
+
+# Linux
+.cache/
+.wtmp
+.utmp
+.login
+.profile
+.sudo_as_admin_successful
+.ecryptfs/
+*.swp
+*~
+
+# Other
+*.log
