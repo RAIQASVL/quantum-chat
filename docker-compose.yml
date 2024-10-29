@@ -1,0 +1,100 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:13
+    container_name: quantum-chat-postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: chatdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d chatdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - quantum_net
+
+  redis:
+    image: redis:6
+    container_name: quantum-chat-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - quantum_net
+
+  go-server:
+    build:
+      context: ./go
+      dockerfile: ../docker/go.Dockerfile
+    container_name: quantum-chat-go-server
+    environment:
+      - DB_HOST=postgres
+      - DB_USER=user
+      - DB_PASSWORD=password
+      - DB_NAME=chatdb
+      - REDIS_HOST=redis
+      - JWT_SECRET=your-secret-key
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - quantum_net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  python-api:
+    build:
+      context: ./python
+      dockerfile: ../docker/python.Dockerfile
+    container_name: quantum-chat-python-api
+    environment:
+      - GO_SERVER_URL=http://go-server:8080
+      - TELEGRAM_BOT_TOKEN=your-bot-token
+    ports:
+      - "8000:8000"
+    depends_on:
+      go-server:
+        condition: service_healthy
+    networks:
+      - quantum_net
+
+  nginx:
+    image: nginx:alpine
+    container_name: quantum-chat-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./web/frontend:/usr/share/nginx/html
+    depends_on:
+      - go-server
+      - python-api
+    networks:
+      - quantum_net
+
+networks:
+  quantum_net:
+    driver: bridge
+
+volumes:
+  postgres_data:
